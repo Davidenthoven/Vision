@@ -7,7 +7,7 @@ clc;
 clear; 
 close all;
 
-run('~/Documents/TU/Year 2 (Master)/Q3/IN4393 - Computer Vision/LAB/vlfeat/vlfeat-0.9.21/toolbox/vl_setup')
+% run('~/Documents/TU/Year 2 (Master)/Q3/IN4393 - Computer Vision/LAB/vlfeat/vlfeat-0.9.21/toolbox/vl_setup')
 
 %Load the image data
 disp('Loading images...')
