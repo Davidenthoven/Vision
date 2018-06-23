@@ -14,6 +14,7 @@ for i = 1:length(image_files)
     clear im;
 end
 
-%we saved the features as featuresset.mat (a 19x2 cell array of variable
-%cell sizes. Since the feature detection taks a some processing time from
-%here on we use the saved featureset.
+%the harris/Hessian implementation did not work for us. In later parts of
+%the assignments we used the included hessian and harris sift features. A
+%script called make_feature_desc_set (included in this project) read
+%these files to a easy to use matlab structure.
