@@ -3,7 +3,10 @@
 clear all;
 load Features_hasher.mat;
 
-for i = 1 % 2:(sizeFeaures,1)
+All_matches = [];   %global matches
+All_F = {};         %all fundamental matrices
+
+for i = 1:18
     
     Feat.A = [Features.har(i).x Features.hes(i).x;
               Features.har(i).y Features.hes(i).y];
@@ -47,22 +50,13 @@ for i = 1 % 2:(sizeFeaures,1)
         clear xy seed;
     
         %start with empty A array
-        A = [];
-        %todo remove s
-        for ai = 1:P
-            x1 = n_xy.A(ai,1);
-            y1 = n_xy.A(ai,2);
-            x2 = n_xy.B(ai,1);
-            y2 = n_xy.B(ai,2);
-            newA = [x1*x2 x1*y2 x1 y1*x2 y1*y2 y1 x2 y2 1];
-            A = [A; newA]; %add to array A
-        end
-        clear n_xy x1 x2 y1 y2 newA;
+        A = horzcat(n_xy.A(:,1).*n_xy.B(:,1),n_xy.A(:,1).*n_xy.B(:,2),n_xy.A(:,1),n_xy.A(:,2).*n_xy.B(:,1),n_xy.A(:,2).*n_xy.B(:,2),n_xy.A(:,2),n_xy.B(:,1), n_xy.B(:,2),ones(size(n_xy.A,1),1));
         
         %calculate F matrix
         [~,~,Vt] = svd(A);
         f = reshape(Vt(:,end),3,3);
         [U,D,V] = svd(f);
+        %singularity forcing??
         D(end,end) = 0;
         F = U*D*V';
         %denormalize
@@ -71,10 +65,8 @@ for i = 1 % 2:(sizeFeaures,1)
         
         %check how much inliers there are
         num_matches = size(matches,2);
-        Points.A = [Feat.A(:,matches(1,:));ones(1,num_matches)];
-        Points.B = [Feat.B(:,matches(2,:));ones(1,num_matches)];                
-        %p1 = [Features{1,1}(1,matches(1,:)); Features{1,1}(2,matches(1,:)); ones(1,size(matches,2))];
-        %p2 = [Features{i,1}(1,matches(1,:)); Features{i,1}(2,matches(1,:)); ones(1,size(matches,2))];
+        Points.A = [Feat.A(:,matches(1,:));ones(1,num_matches)]; %xy image a
+        Points.B = [Feat.B(:,matches(2,:));ones(1,num_matches)]; %xy image b    
         Distance = [];
         for point = 1:num_matches
             d.top = (Points.B(:,point)'*F*Points.A(:,point)).^2;
@@ -84,15 +76,32 @@ for i = 1 % 2:(sizeFeaures,1)
             Distance(point) = d.top/d.bottom;
             clear d;
         end
-        
+        %optimize max handeling
         threshold = 10;
-        Ransac_d_value(ri) = sum(Distance(:)<threshold);
+        if 
+        Ransac_d = sum(Distance(:)<threshold);
+        
+        %only use the inliers.
+        Ransac__inliers{ri} = matches(:,find(Distance<threshold));
         Ransac_F{ri} = F;
+        clear F
+
     end  
+    
+    %store the best F
+    All_F{i} = Ransac_F{find(Ransac_d_value == max(Ransac_d_value))};
+    All_matches = [All_matches; zeros(1,size(All_matches,2))];
+    newpoints = Ransac_inliers{find(Ransac_d_value == max(Ransac_d_value))};
+    if i == 1
+            All_matches = [newpoints];
+    else
+            All_matches = [All_matches[ zeros(1,size(newpoints,2)); newpoints]];
+    end
+        
     %give some insight
-    max(Ransac_d_value)
-    sum(Ransac_d_value>100)
-    clear matches;
+    %max(Ransac_d_value)
+    %sum(Ransac_d_value>100)
+    clear Ransac_F  Ransac_d_value Ransac_d_points_inliers matches newpoints;
 end
 
 function [T,coord_out] = normalizecoords(coordsin)
