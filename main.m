@@ -61,7 +61,36 @@ disp('--- make PVM ---')
 PVM = Make_PVM(inliers);
 %load('PVM_set.mat')
 
-imshow(imfuse((imread([imagedir '/' image_files(1).name])),(imread([imagedir '/' image_files(2).name])),'falsecolor'));
-hold on;
-plot(Feat{1,1}.A(1,inliers{1,1}(1,:)), Feat{1,1}.A(2,inliers{1,1}(1,:)), 'r.', 'LineWidth', 2, 'MarkerSize', 5);
-plot(Feat{1,1}.B(1,inliers{1,1}(2,:)), Feat{1,1}.B(2,inliers{1,1}(2,:)), 'g.', 'LineWidth', 2, 'MarkerSize', 5);
+% imshow(imfuse((imread([imagedir '/' image_files(1).name])),(imread([imagedir '/' image_files(2).name])),'falsecolor'));
+% hold on;
+% plot(Feat{1,1}.A(1,inliers{1,1}(1,:)), Feat{1,1}.A(2,inliers{1,1}(1,:)), 'r.', 'LineWidth', 2, 'MarkerSize', 5);
+% plot(Feat{1,1}.B(1,inliers{1,1}(2,:)), Feat{1,1}.B(2,inliers{1,1}(2,:)), 'g.', 'LineWidth', 2, 'MarkerSize', 5);
+
+disp('--- make blocks ---')
+rPVM3 = PVM(:,(3 == sum((PVM > 0),1))); %reduce PVM to colums with 3 or 4 active rows.
+rPVM4 = PVM(:,(4 == sum((PVM > 0),1)));
+
+for i = 1:17
+    Block3{i} = rPVM3(i:i+2,        (sum(rPVM3(i:i+2    ,:)>0,1)==3));
+end
+    Block3{18} = rPVM3([18 19 1],   (sum(rPVM3([18 19 1],:)>0,1)==3));
+    Block3{19} = rPVM3([19 1 2],    (sum(rPVM3([19 1 2] ,:)>0,1)==3));
+    
+for i = 1:16
+    Block4{i}  = rPVM4(i:i+3,       (sum(rPVM4(i:i+3       ,:)>0,1)==4));
+end
+    Block4{17} = rPVM4([17 18 19 1],(sum(rPVM4([17 18 19 1],:)>0,1)==4));
+    Block4{18} = rPVM4([18 19 1  2],(sum(rPVM4([18 19 1  2],:)>0,1)==4));
+    Block4{19} = rPVM4([19 1  2  3],(sum(rPVM4([19 1  2  3],:)>0,1)==4));
+    
+clear rPVM3 rPVM4;
+
+disp('--- Make SFM ---');
+for i = 1:19
+    [M{i},S{i}] = SFM(Block3{i})
+    plot3(S{i}(1,:),S{i}(2,:),S{i}(3,:),'.r');
+    pause();
+end
+
+
+disp('--- Stitching ---');
