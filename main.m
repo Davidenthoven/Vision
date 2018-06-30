@@ -1,48 +1,67 @@
-% IN4393-16 Computer Vision: Final Assignment
-%
-% David Enthoven & Randy Prozee
+clear all;
 
-% Clear all old data
-clc; 
-clear; 
-close all;
+%image names
+imagedir = 'modelCastlePNG/modelCastlePNG';
+image_files = dir(strcat(imagedir,'/*.png'));
+%imread([imagedir '/' image_files(i).name])
 
-% run('~/Documents/TU/Year 2 (Master)/Q3/IN4393 - Computer Vision/LAB/vlfeat/vlfeat-0.9.21/toolbox/vl_setup')
+disp('--- Loading features ---')
+load Features_hasher.mat;
 
-%Load the image data
-disp('Loading images...')
+disp('--- calculating matches ---')
+%TODO match 19 to 1
+threshold = 10;
 
-% Images
-image_files = dir('modelCastlePNG/*.png');
+% for i = 1:19
+%     
+%     if i== 19
+%         j=1;
+%     else
+%         j=i+1;
+%     end
+%     
+%     %display
+%     fprintf("Matching between image %d and %d \n", i, j)
+%     
+%     Feat{i}.A = [  Features.har(i).x Features.hes(i).x;
+%                    Features.har(i).y Features.hes(i).y];
+%     Feat{i}.B = [  Features.har(j).x Features.hes(j).x;
+%                    Features.har(j).y Features.hes(j).y];
+%     
+%     Desc.A = [  Features.har(i).desc Features.hes(i).desc];
+%     Desc.B = [  Features.har(j).desc Features.hes(j).desc];
+%     
+%     %remove duplicates (possible not needed any longer)
+%     [Desc.A,ia.A,ic.A] = unique(Desc.A','stable','rows');
+%     [Desc.B,ia.B,ic.B] = unique(Desc.B','stable','rows');
+%     Feat{i}.A = Feat{i}.A(:,ia.A); %remove coords from features
+%     Feat{i}.B = Feat{i}.B(:,ia.B);
+%     clear ia ib ic;
+%     Desc.A = Desc.A';
+%    Desc.B = Desc.B';
+%     
+%     %find matches (can lower threshold if more points are needed)
+%     [matches{i},~] = vl_ubcmatch(Desc.A,Desc.B);
+%     %[matches,scores] = vl_ubcmatch(Desc.A,Desc.B);
+%     clear Desc;
+%     
+%     fprintf("matches found: %d \n", size(matches{i},2))
+%     
+%     %Apply normalized 8-point RANSAC algorithm to find best matches.
+%     [inliers{i},F{i}] = EightpointRansac(Feat{i}.A,Feat{i}.B,matches{i},threshold);
+%end
+clear i j;
 
-for i = 1:length(image_files)
-    
-    current_image = imread([image_files(i).folder '/' image_files(i).name]);
-    
-    % Init array based on the image size
-    if i == 1
-        images_original = uint8(zeros([size(current_image) length(image_files)]));
-    end
-    
-    images_original(:, :, :, i) = uint8(current_image);
-    
-end
+load('Feat_set.mat')
+%load('matches_set.mat')
+load('inliers_set.mat')
+%load('F_set.mat')
 
-% Convert images to greyscale
-images_grey = uint8(mean(images_original, 3));
+disp('--- make PVM ---')
+PVM = Make_PVM(inliers);
+%load('PVM_set.mat')
 
-%(4 pts) Feature point detection, and the extraction of SIFT descriptors
-
-%(4 pts) Apply normalized 8-point RANSAC algorithm to find best matches
-
-%(8 pts) Chaining: Create point-view matrix to represent point correspondences for different camera views
-
-%(12 pts) Stiching:
-
-%(4 pts) Apply bundle adjustment
-
-%(4 pts) Eliminate ane ambiguity
-
-%(4 pts) 3D Model Plotting:
-
-
+imshow(imfuse((imread([imagedir '/' image_files(1).name])),(imread([imagedir '/' image_files(2).name])),'falsecolor'));
+hold on;
+plot(Feat{1,1}.A(1,inliers{1,1}(1,:)), Feat{1,1}.A(2,inliers{1,1}(1,:)), 'r.', 'LineWidth', 2, 'MarkerSize', 5);
+plot(Feat{1,1}.B(1,inliers{1,1}(2,:)), Feat{1,1}.B(2,inliers{1,1}(2,:)), 'g.', 'LineWidth', 2, 'MarkerSize', 5);
