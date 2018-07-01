@@ -105,30 +105,30 @@ for i = 1:19
     if size(D,2)>2
         [~,S{i}] = SFM(D);
     end
-
-    %plot it for me please
-    %plot3(S{i}(1,:),S{i}(2,:),S{i}(3,:),'.r');
 end
 clear i j k l D;
 
 disp('--- Stitching ---');
-final_S = S{1};
+finS = S{1};
 
 for i = 1:19
     j = mod(i,19)+1;
     
-    %map already known points on the known points    
+    %map already known points on the known points
     start = Dlenght(i).prev + Dlenght(i).d +1;
-    [~, ~, transform] = procrustes(S{i}(:,start:end)',S{j}(:,1:Dlenght(i).next)');
+    Q1 = S{i}(:,start:end);
+    Q2 = S{j}(:,1:Dlenght(i).next);
+    Q3 = S{j}(:,Dlenght(i).next+1:end);
+    [~, ~, transform] = procrustes(Q1',Q2');
     
     %apply same transform on the triplets. and the next quads
-    Z = (transform.b*S{j}'*transform.T+transform.c(1,:))';
+    Z = (transform.b*Q3'*transform.T+transform.c(1,:))';
     
     close all;
-    plot3(final_S(1,:),final_S(2,:),final_S(3,:),'.r');
+    plot3(finS(1,:),finS(2,:),finS(3,:),'.r');
     hold on
     plot3(Z(1,:),Z(2,:),Z(3,:),'.g');
     
-    final_S = [final_S Z];
-
+    finS = [finS Z];
+    
 end

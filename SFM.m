@@ -19,10 +19,10 @@ options = optimoptions(@lsqnonlin,'Display','off');
 L = lsqnonlin(@(x)myfun(x,M_hat),L0,[],[],options);
 % Recover C
 [C,p] = chol(L,'lower');
+    % Update M and S
 
 if p == 0
     display('afine');
-    % Update M and S
     M = M_hat*C;
     S = pinv(C)*S_hat;
 else
