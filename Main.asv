@@ -9,28 +9,22 @@ disp('--- Loading features ---')
 load Features_hasher.mat;
 
 disp('--- calculating matches ---')
-%TODO match 19 to 1
-threshold = 10;
+threshold = 15;
 
 % for i = 1:19
-%     
-%     if i== 19
-%         j=1;
-%     else
-%         j=i+1;
-%     end
-%     
+%     j = mod(i,19)+1;
+% 
 %     %display
 %     fprintf("Matching between image %d and %d \n", i, j)
-%     
+% 
 %     Feat{i}.A = [  Features.har(i).x Features.hes(i).x;
 %                    Features.har(i).y Features.hes(i).y];
 %     Feat{i}.B = [  Features.har(j).x Features.hes(j).x;
 %                    Features.har(j).y Features.hes(j).y];
-%     
+% 
 %     Desc.A = [  Features.har(i).desc Features.hes(i).desc];
 %     Desc.B = [  Features.har(j).desc Features.hes(j).desc];
-%     
+% 
 %     %remove duplicates (possible not needed any longer)
 %     [Desc.A,ia.A,ic.A] = unique(Desc.A','stable','rows');
 %     [Desc.B,ia.B,ic.B] = unique(Desc.B','stable','rows');
@@ -38,19 +32,20 @@ threshold = 10;
 %     Feat{i}.B = Feat{i}.B(:,ia.B);
 %     clear ia ib ic;
 %     Desc.A = Desc.A';
-%    Desc.B = Desc.B';
-%     
+%     Desc.B = Desc.B';
+% 
 %     %find matches (can lower threshold if more points are needed)
-%     [matches{i},~] = vl_ubcmatch(Desc.A,Desc.B);
+%     %[matches{i},~] = vl_ubcmatch(Desc.A,Desc.B);
+%     [matches{i},~] = vl_ubcmatch(Desc.A,Desc.B,1);
 %     %[matches,scores] = vl_ubcmatch(Desc.A,Desc.B);
 %     clear Desc;
-%     
+% 
 %     fprintf("matches found: %d \n", size(matches{i},2))
-%     
+% 
 %     %Apply normalized 8-point RANSAC algorithm to find best matches.
 %     [inliers{i},F{i}] = EightpointRansac(Feat{i}.A,Feat{i}.B,matches{i},threshold);
-%end
-clear i j;
+% end
+% clear i j;
 
 load('Feat_set.mat')
 %load('matches_set.mat')
@@ -59,7 +54,6 @@ load('inliers_set.mat')
 
 disp('--- make PVM ---')
 PVM = Make_PVM(inliers);
-%load('PVM_set.mat')
 
 % imshow(imfuse((imread([imagedir '/' image_files(1).name])),(imread([imagedir '/' image_files(2).name])),'falsecolor'));
 % hold on;
@@ -70,18 +64,71 @@ disp('--- make blocks ---')
 rPVM3 = PVM(:,(3 == sum((PVM > 0),1))); %reduce PVM to colums with 3 or 4 active rows.
 rPVM4 = PVM(:,(4 == sum((PVM > 0),1)));
 
-for i = 1:17
-    block3{i} = rPVM3(i:i+2,     (sum(rPVM3([18 19 1],:)>0,1)==3));
+for i = 1:19
+    j = mod(i,19)+1;
+    k = mod(i+1,19)+1;
+    l = mod(i+2,19)+1;
+    Block3{i} = rPVM3([i j k],   (sum(rPVM3([i j k]  ,:)>0,1)==3));
+    Block4{i} = rPVM4([i j k l], (sum(rPVM4([i j k l],:)>0,1)==4));
 end
-    block3{18} = rPVM3([18 19 1],(sum(rPVM3([18 19 1],:)>0,1)==3));
-    block3{19} = rPVM3([19 1 2], (sum(rPVM3([19 1 2] ,:)>0,1)==3));
-    
-for i = 1:16
-    block4{i} = rPVM3(i:i+2,((rPVM3(i,:)>0) + (rPVM3(i+2,:)>0) == 2));
-end
-    block4{18} = rPVM4([18 19 1],(sum(rPVM4([18 19 1],:)>0,1)==4));
-    block4{19} = rPVM4([19 1 2], (sum(rPVM4([19 1 2] ,:)>0,1)==4));
+clear rPVM3 rPVM4 i j k l;
 
 disp('--- Make SFM ---');
+for i = 1:19
+    h = mod(i+17,19)+1; % 1 back
+    j = mod(i,19)+1;
+    k = mod(i+1,19)+1;
+    l = mod(i+2,19)+1;
+    
+   %get trippels from previous 4 block
+    D4prev =[   Feat{i}.A(1:2,Block4{h}(2,:));
+                Feat{j}.A(1:2,Block4{h}(3,:));
+                Feat{k}.A(1:2,Block4{h}(4,:))];
+             
+    %all trippel coords
+    D3 = [  Feat{i}.A(1:2,Block3{i}(1,:));
+            Feat{j}.A(1:2,Block3{i}(2,:));
+            Feat{k}.A(1:2,Block3{i}(3,:))];
+    
+    %get trippels from next 4 block 
+    D4next = [Feat{i}.A(1:2,Block4{i}(1,:));
+              Feat{j}.A(1:2,Block4{i}(2,:));
+              Feat{k}.A(1:2,Block4{i}(3,:))];
+          
+    %store lengths for easy use later
+    Dlenght(i).d    = (size(D3,2));
+    Dlenght(i).prev = (size(D4prev,2));
+    Dlenght(i).next = (size(D4next,2));
+    
+    D = [D4prev D3 D4next];
 
+    if size(D,2)>2
+        [~,S{i}] = SFM(D);
+    end
 
+    %plot it for me please
+    %plot3(S{i}(1,:),S{i}(2,:),S{i}(3,:),'.r');
+end
+clear i j k l D;
+
+disp('--- Stitching ---');
+final_S = S{1};
+
+for i = 1:19
+    j = mod(i,19)+1;
+    
+    %map already known points on the known points    
+    start = Dlenght(i).prev + Dlenght(i).d +1;
+    [~, ~, transform] = procrustes(S{i}(:,start:end)',S{j}(:,1:Dlenght(i).next)');
+    
+    %apply same transform on the triplets. and the next quads
+    Z = (transform.b*S{j}'*transform.T+transform.c(1,:))';
+    
+    close all;
+    plot3(final_S(1,:),final_S(2,:),final_S(3,:),'.r');
+    hold on
+    plot3(Z(1,:),Z(2,:),Z(3,:),'.g');
+    
+    final_S = [final_S Z];
+
+end

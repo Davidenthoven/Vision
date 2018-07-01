@@ -1,6 +1,5 @@
 function [M, S] = SFM(Points)
-Points = Points - repmat(mean(mean(Points)), size(Points));
-
+Points = Points - repmat(sum(Points,2)/size(Points,2),1, size(Points,2));
 %singular value decomposition
 [U,W,V] = svd(Points);
 
@@ -17,15 +16,17 @@ L0 = pinv(A' * A);
 
 % Solve for L
 options = optimoptions(@lsqnonlin,'Display','off');
-L = lsqnonlin(@myfun,L0,[],[],options);
+L = lsqnonlin(@(x)myfun(x,M_hat),L0,[],[],options);
 % Recover C
 [C,p] = chol(L,'lower');
 
 if p == 0
+    display('afine');
     % Update M and S
     M = M_hat*C;
     S = pinv(C)*S_hat;
 else
+    display('not afine');
     M = M_hat;
     S = S_hat;
 end
