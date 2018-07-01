@@ -119,10 +119,11 @@ for i = 1:19
     Q1 = S{i}(:,start:end);
     Q2 = S{j}(:,1:Dlenght(i).next);
     Q3 = S{j}(:,Dlenght(i).next+1:end);
-    [~, ~, transform] = procrustes(Q1',Q2');
-    
+    [d, Z, transform] = procrustes(Q1',Q2');
+    d
     %apply same transform on the triplets. and the next quads
     Z = (transform.b*Q3'*transform.T+transform.c(1,:))';
+    
     
     close all;
     plot3(finS(1,:),finS(2,:),finS(3,:),'.r');
@@ -130,5 +131,4 @@ for i = 1:19
     plot3(Z(1,:),Z(2,:),Z(3,:),'.g');
     
     finS = [finS Z];
-    
 end
